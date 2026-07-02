@@ -6,10 +6,13 @@ import (
 	"path/filepath"
 )
 
+const AutoDetectInterval = 10
+
 var (
-	configDir     string
-	enabledFile   string
+	configDir       string
+	enabledFile     string
 	enabledScanners map[string]bool
+	scanCount       int
 )
 
 func init() {
@@ -23,7 +26,8 @@ func init() {
 }
 
 type EnabledConfig struct {
-	Scanners map[string]bool `json:"scanners"`
+	Scanners  map[string]bool `json:"scanners"`
+	ScanCount int             `json:"scan_count"`
 }
 
 func LoadEnabled() (map[string]bool, error) {
@@ -33,7 +37,9 @@ func LoadEnabled() (map[string]bool, error) {
 	data, err := os.ReadFile(enabledFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return config.Scanners, nil
+			autoDetectFirstRun()
+			SaveEnabled(enabledScanners)
+			return enabledScanners, nil
 		}
 		return nil, err
 	}
@@ -41,6 +47,7 @@ func LoadEnabled() (map[string]bool, error) {
 		return nil, err
 	}
 	enabledScanners = config.Scanners
+	scanCount = config.ScanCount
 	return config.Scanners, nil
 }
 
@@ -49,7 +56,8 @@ func SaveEnabled(scanners map[string]bool) error {
 		return err
 	}
 	config := &EnabledConfig{
-		Scanners: scanners,
+		Scanners:  scanners,
+		ScanCount: scanCount,
 	}
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -78,4 +86,40 @@ func GetAllEnabled() map[string]bool {
 
 func SetEnabledFromMap(m map[string]bool) {
 	enabledScanners = m
+}
+
+func autoDetectFirstRun() {
+	for _, s := range Scanners {
+		enabledScanners[s.Name()] = s.Available()
+	}
+	scanCount = 0
+}
+
+func IncrementScanCount() {
+	scanCount++
+	if scanCount >= AutoDetectInterval {
+		AutoDetectNewTools()
+		scanCount = 0
+	}
+	SaveEnabled(enabledScanners)
+}
+
+func AutoDetectNewTools() {
+	changed := false
+	for _, s := range Scanners {
+		current, exists := enabledScanners[s.Name()]
+		available := s.Available()
+		if !exists {
+			enabledScanners[s.Name()] = available
+			if available {
+				changed = true
+			}
+		} else if !current && available {
+			enabledScanners[s.Name()] = true
+			changed = true
+		}
+	}
+	if changed {
+		SaveEnabled(enabledScanners)
+	}
 }

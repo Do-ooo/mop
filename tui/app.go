@@ -136,6 +136,7 @@ func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
 	return tea.Batch(
 		tickCmd(),
 		func() tea.Msg {
+			scanner.IncrementScanCount()
 			var groups []scanner.ToolGroup
 			now := time.Now()
 			for _, s := range scanner.Scanners {
@@ -146,7 +147,7 @@ func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
 					continue
 				}
 				items, err := s.Scan()
-				if err != nil || len(items) == 0 {
+				if err != nil {
 					continue
 				}
 
@@ -173,10 +174,6 @@ func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
 					case 3:
 						filtered = append(filtered, item)
 					}
-				}
-
-				if len(filtered) == 0 {
-					continue
 				}
 
 				sort.Slice(filtered, func(i, j int) bool {

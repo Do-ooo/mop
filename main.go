@@ -54,6 +54,7 @@ func runClean() {
 	}
 
 	fmt.Println("Scanning...")
+	scanner.IncrementScanCount()
 	groups, err := scanner.ScanAll()
 	if err != nil {
 		fmt.Printf("Scan error: %v\n", err)
@@ -138,6 +139,7 @@ func runClean() {
 
 func runScan() {
 	fmt.Println("Scanning...")
+	scanner.IncrementScanCount()
 	groups, err := scanner.ScanAll()
 	if err != nil {
 		fmt.Printf("Scan error: %v\n", err)

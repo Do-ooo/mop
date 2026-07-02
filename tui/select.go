@@ -429,67 +429,71 @@ func buildContentLines(m Model) []string {
 		)
 		lines = append(lines, headerLine)
 
-		for ii, item := range g.Items {
-			entryIdx := -1
-			for ei, e := range m.entries {
-				if !e.isHeader && e.groupIdx == gi && e.itemIdx == ii {
-					entryIdx = ei
-					break
-				}
-			}
-
-			isWL := whitelist.IsWhitelisted(m.whitelist, item.Path)
-			cursor := "  "
-			if entryIdx == m.cursor {
-				cursor = cursorStyle.Render("> ")
-			}
-
-			check := " "
-			if m.selected[[2]int{gi, ii}] {
-				check = selectedStyle.Render("x")
-			}
-
-			var descColored string
-			var sizeColored string
-
-			if isWL {
-			descPlain := fmt.Sprintf("⊘ %s", item.Description)
-			descPadded := fmt.Sprintf("%-*s", descColWidth-2, descPlain)
-			descColored = whitelistStyle.Render(descPadded)
-			sizeColored = whitelistStyle.Render(fmt.Sprintf(" %*s", sizeColWidth-1, "--"))
+		if len(g.Items) == 0 {
+			lines = append(lines, dimStyle.Render("    (No caches found)"))
 		} else {
-			var prefix string
-			if item.Risk == scanner.RiskDeep {
-				prefix = "⚠ "
-			} else {
-				prefix = "  "
-			}
-			descPlain := fmt.Sprintf("%s%s", prefix, item.Description)
-			descPadded := fmt.Sprintf("%-*s", descColWidth-2, descPlain)
-			if item.Risk == scanner.RiskDeep {
-				descColored = warningStyle.Render(descPadded)
-			} else {
-				descColored = descPadded
-			}
-			sizePlain := scanner.FormatSize(item.Size)
-			if item.Size >= 100*1024*1024 {
-				sizeColored = selectedStyle.Render(fmt.Sprintf("🔥%*s", sizeColWidth-2, sizePlain))
-			} else {
-				sizeColored = fmt.Sprintf(" %*s", sizeColWidth-1, sizePlain)
-			}
-		}
+			for ii, item := range g.Items {
+				entryIdx := -1
+				for ei, e := range m.entries {
+					if !e.isHeader && e.groupIdx == gi && e.itemIdx == ii {
+						entryIdx = ei
+						break
+					}
+				}
 
-			line := fmt.Sprintf("%s [%s] %s  %s",
-				cursor, check,
-				descColored,
-				sizeColored,
-			)
+				isWL := whitelist.IsWhitelisted(m.whitelist, item.Path)
+				cursor := "  "
+				if entryIdx == m.cursor {
+					cursor = cursorStyle.Render("> ")
+				}
 
-			if entryIdx == m.cursor && !isWL {
-				line = cursorStyle.Render(line)
+				check := " "
+				if m.selected[[2]int{gi, ii}] {
+					check = selectedStyle.Render("x")
+				}
+
+				var descColored string
+				var sizeColored string
+
+				if isWL {
+					descPlain := fmt.Sprintf("⊘ %s", item.Description)
+					descPadded := fmt.Sprintf("%-*s", descColWidth-2, descPlain)
+					descColored = whitelistStyle.Render(descPadded)
+					sizeColored = whitelistStyle.Render(fmt.Sprintf(" %*s", sizeColWidth-1, "--"))
+				} else {
+					var prefix string
+					if item.Risk == scanner.RiskDeep {
+						prefix = "⚠ "
+					} else {
+						prefix = "  "
+					}
+					descPlain := fmt.Sprintf("%s%s", prefix, item.Description)
+					descPadded := fmt.Sprintf("%-*s", descColWidth-2, descPlain)
+					if item.Risk == scanner.RiskDeep {
+						descColored = warningStyle.Render(descPadded)
+					} else {
+						descColored = descPadded
+					}
+					sizePlain := scanner.FormatSize(item.Size)
+					if item.Size >= 100*1024*1024 {
+						sizeColored = selectedStyle.Render(fmt.Sprintf("🔥%*s", sizeColWidth-2, sizePlain))
+					} else {
+						sizeColored = fmt.Sprintf(" %*s", sizeColWidth-1, sizePlain)
+					}
+				}
+
+				line := fmt.Sprintf("%s [%s] %s  %s",
+					cursor, check,
+					descColored,
+					sizeColored,
+				)
+
+				if entryIdx == m.cursor && !isWL {
+					line = cursorStyle.Render(line)
+				}
+
+				lines = append(lines, line)
 			}
-
-			lines = append(lines, line)
 		}
 
 		lines = append(lines, "")
@@ -641,12 +645,14 @@ func viewDone(m Model) string {
 
 	var successCount, failCount int
 	var successSize int64
+	var failedResults []cleaner.CleanResult
 	for _, r := range m.cleanResults {
 		if r.Success {
 			successCount++
 			successSize += r.Size
 		} else {
 			failCount++
+			failedResults = append(failedResults, r)
 		}
 	}
 
@@ -670,6 +676,15 @@ func viewDone(m Model) string {
 		b.WriteString("\n")
 	}
 
+	if len(failedResults) > 0 {
+		b.WriteString(errorStyle.Render("Failed items:\n"))
+		for _, r := range failedResults {
+			b.WriteString(fmt.Sprintf("  %s\n", r.Path))
+			b.WriteString(fmt.Sprintf("    %s\n", errorStyle.Render(r.Error)))
+		}
+		b.WriteString("\n")
+	}
+
 	b.WriteString(helpStyle.Render("[Enter] Back to list  [q] Main menu"))
 	return b.String()
 }
@@ -681,7 +696,9 @@ func updateDone(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc":
 			m.screen = screenMenu
 		case "enter":
-			m.screen = screenSelect
+			m.screen = screenScanning
+			m.spinnerIdx = 0
+			return m, scanCmdWithFilter(m.timeFilter, m.deepMode)
 		}
 	}
 	return m, nil
