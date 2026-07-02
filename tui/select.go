@@ -5,6 +5,7 @@ import (
 	"mop/cleaner"
 	"mop/config"
 	"mop/scanner"
+	"mop/update"
 	"mop/whitelist"
 	"strings"
 	"time"
@@ -95,6 +96,11 @@ func viewMenu(m Model) string {
 	}
 
 	b.WriteString("\n")
+
+	if info := update.GetCachedUpdate(); info != nil && info.Available {
+		b.WriteString(selectedStyle.Render(fmt.Sprintf("  ↑ Update available: v%s → v%s (run 'mop update')\n\n", info.CurrentVersion, info.LatestVersion)))
+	}
+
 	b.WriteString(helpStyle.Render("[↑/↓] Navigate  [Enter] Select  [q] Quit"))
 
 	return b.String()
@@ -710,7 +716,7 @@ func viewAbout(m Model) string {
 	b.WriteString("mop - AI Tool Cache Cleaner\n\n")
 	b.WriteString("Lightweight, fast TUI tool for cleaning up\n")
 	b.WriteString("cache and session data from AI coding tools.\n\n")
-	b.WriteString(dimStyle.Render("v0.1.0 MVP\n"))
+	b.WriteString(dimStyle.Render(fmt.Sprintf("v%s\n", update.Version)))
 	b.WriteString(dimStyle.Render("Built with Go + Bubble Tea\n\n"))
 	b.WriteString(helpStyle.Render("[q/esc] Back to menu"))
 	return b.String()

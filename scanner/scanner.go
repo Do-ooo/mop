@@ -141,22 +141,28 @@ func dirSize(path string) (int64, error) {
 var electronCacheDirs = []struct {
 	name string
 	desc string
+	risk RiskLevel
 }{
-	{"Cache", "Browser cache"},
-	{"Code Cache", "JavaScript code cache"},
-	{"GPUCache", "GPU rendering cache"},
-	{"DawnGraphiteCache", "WebGPU cache"},
-	{"DawnWebGPUCache", "WebGPU cache"},
-	{"CachedData", "Cached data"},
-	{"CachedProfilesData", "Cached profile data"},
-	{"CachedConfigurations", "Cached configurations"},
-	{"CachedExtensionVSIXs", "Cached extension packages"},
-	{"Service Worker", "Service worker cache"},
-	{"blob_storage", "Blob storage cache"},
-	{"SharedClientCache", "Shared client cache"},
-	{"Crashpad", "Crash reports"},
-	{"CrashReport", "Crash reports"},
-	{"logs", "Application logs"},
+	{"Cache", "Browser cache", RiskRegular},
+	{"Code Cache", "JavaScript code cache", RiskRegular},
+	{"GPUCache", "GPU rendering cache", RiskRegular},
+	{"DawnGraphiteCache", "WebGPU cache", RiskRegular},
+	{"DawnWebGPUCache", "WebGPU cache", RiskRegular},
+	{"CachedData", "Cached data", RiskRegular},
+	{"CachedProfilesData", "Cached profile data", RiskRegular},
+	{"CachedConfigurations", "Cached configurations", RiskRegular},
+	{"CachedExtensionVSIXs", "Cached extension packages", RiskRegular},
+	{"Service Worker", "Service worker cache", RiskRegular},
+	{"blob_storage", "Blob storage cache", RiskRegular},
+	{"SharedClientCache", "Shared client cache", RiskRegular},
+	{"Crashpad", "Crash reports", RiskRegular},
+	{"CrashReport", "Crash reports", RiskRegular},
+	{"logs", "Application logs", RiskRegular},
+	{"Local Storage", "Local storage (login state)", RiskDeep},
+	{"Session Storage", "Session storage", RiskDeep},
+	{"Cookies", "Login cookies", RiskDeep},
+	{"IndexedDB", "Local databases", RiskDeep},
+	{"Network", "Network cache", RiskRegular},
 }
 
 func scanElectronDesktop(basePath string) []CacheItem {
@@ -173,6 +179,7 @@ func scanElectronDesktop(basePath string) []CacheItem {
 					Size:        size,
 					Description: d.desc,
 					ModTime:     info.ModTime(),
+					Risk:        d.risk,
 				})
 			}
 		}

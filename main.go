@@ -7,6 +7,7 @@ import (
 	"mop/config"
 	"mop/scanner"
 	"mop/tui"
+	"mop/update"
 	"mop/whitelist"
 	"os"
 	"time"
@@ -25,11 +26,22 @@ func main() {
 		case "scan":
 			runScan()
 			return
+		case "update":
+			if err := update.DoUpdate(); err != nil {
+				fmt.Printf("Update failed: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "version":
+			fmt.Printf("mop v%s\n", update.Version)
+			return
 		case "--dry-run":
 			runDryRun()
 			return
 		}
 	}
+
+	update.BackgroundCheck()
 
 	p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
