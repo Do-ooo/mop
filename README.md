@@ -1,40 +1,42 @@
 # mop
 
-AI Tool Cache Cleaner — 快速清理 AI 编程工具的缓存和会话数据。
+[中文文档](README_ZH.md) | English
 
-## 特性
+AI Tool Cache Cleaner — Fast cleanup of cache and session data from AI coding tools.
 
-- 🚀 **极速启动**：单二进制 <10MB，启动 <50ms
-- 🎨 **TUI 交互**：基于 Bubble Tea 的终端界面
-- 🗑️ **安全删除**：默认移到废纸篓，可随时恢复
-- ⏱️ **时间过滤**：按时间范围筛选（全部 / 3天内 / 7天内 / 30天内）
-- 🔥 **大文件标记**：超过 100MB 的项自动高亮
-- 📝 **白名单**：按 W 键快速加入/移出白名单
-- ⚙️ **可配置**：Manage Tools 按需启用/禁用扫描器
-- 🤖 **脚本友好**：支持非交互模式（`mop clean`）
+## Features
 
-## 安装
+- Fast startup: single binary <10MB, launches in <50ms
+- TUI interface built with Bubble Tea
+- Safe deletion: moves to Trash by default, recoverable anytime
+- Time filter: all / 3 days / 7 days / 30 days
+- Large file highlight: items >100MB are auto-highlighted
+- Whitelist: press W to quickly add/remove paths
+- Configurable: enable/disable scanners per tool
+- Script-friendly: non-interactive mode (`mop clean`)
 
-### 快速安装（推荐）
+## Install
+
+### Quick Install (Recommended)
 
 **Apple Silicon (M1/M2/M3/M4)**
 
 ```bash
-curl -L https://github.com/Do-ooo/mop/releases/download/v0.1.0/mop-darwin-arm64 -o mop && chmod +x mop && sudo mv mop /usr/local/bin/
+curl -L https://github.com/Do-ooo/mop/releases/latest/download/mop-darwin-arm64 -o mop && chmod +x mop && sudo mv mop /usr/local/bin/
 ```
 
 **Intel Mac**
 
 ```bash
-curl -L https://github.com/Do-ooo/mop/releases/download/v0.1.0/mop-darwin-amd64 -o mop && chmod +x mop && sudo mv mop /usr/local/bin/
+curl -L https://github.com/Do-ooo/mop/releases/latest/download/mop-darwin-amd64 -o mop && chmod +x mop && sudo mv mop /usr/local/bin/
 ```
 
-安装后直接运行：
+Then run:
 ```bash
 mop
 ```
 
-### 源码编译
+### Build from Source
 
 ```bash
 git clone https://github.com/Do-ooo/mop.git
@@ -42,84 +44,104 @@ cd mop
 go build -o mop .
 ```
 
-## 使用
+## Usage
 
-### 交互模式（默认）
+### Interactive Mode (Default)
 
 ```bash
 mop
 ```
 
-进入主菜单，选择：
-- **Analyze** — Regular 模式，扫描安全项（缓存/日志/临时文件）
-- **Deep Analyze** — Deep 模式，扫描全部项（含会话历史，删了不可恢复）
-- **Manage Tools** — 启用/禁用各工具的扫描器
-- **About** — 关于信息
+Main menu options:
+- **Analyze** — Regular mode, scans safe items (cache/logs/temp files)
+- **Deep Analyze** — Deep mode, scans all items (including session history, unrecoverable)
+- **Manage Tools** — Enable/disable scanners per tool
+- **About** — About mop
 
-### 快捷键（选择界面）
+### Keyboard Shortcuts (Selection Screen)
 
-| 键 | 功能 |
-|----|------|
-| `↑/↓` 或 `j/k` | 上下导航 |
-| `Space` | 选中/取消选中 |
-| `a` | 全选 |
-| `i` | 反选 |
-| `w` | 加入/移出白名单 |
-| `r` | 重新扫描 |
-| `t` | 切换时间过滤（全部→3天内→7天内→30天内） |
-| `d` | 切换删除模式（Trash/Delete） |
-| `Enter` | 开始清理（Deep 模式需二次确认） |
-| `q` | 返回菜单 / 退出 |
+| Key | Action |
+|-----|--------|
+| `↑/↓` or `j/k` | Navigate |
+| `Space` | Toggle selection |
+| `a` | Select all |
+| `i` | Invert selection |
+| `w` | Add/remove from whitelist |
+| `r` | Rescan |
+| `t` | Cycle time filter (all → 3d → 7d → 30d) |
+| `d` | Toggle delete mode (Trash/Delete) |
+| `Enter` | Start cleaning (Deep mode requires confirmation) |
+| `q` | Back to menu / Quit |
 
-### 命令行模式
+### CLI Mode
 
-#### 扫描（仅查看）
+#### Scan (preview only)
 
 ```bash
 mop scan
 ```
 
-#### 一键清理
+#### One-shot Clean
 
 ```bash
-# 默认移到废纸篓
+# Move to Trash (default)
 mop clean
 
-# 预览（不删除）
+# Preview without deleting
 mop --dry-run
 
-# 永久删除（跳过废纸篓）
+# Permanently delete (skip Trash)
 mop clean --delete
 ```
 
-## 支持的工具
+#### Self-Update
 
-| 工具 | 类型 |
+```bash
+mop update
+```
+
+Checks for the latest release and updates the binary in place.
+
+### Supported Tools
+
+| Tool | Type |
 |------|------|
-| OpenCode | CLI |
+| Trae | CLI + Desktop |
+| WorkBuddy | CLI + Desktop |
+| Cursor | Desktop |
+| Windsurf | Desktop |
+| VS Code | Desktop |
 | Codex | CLI + Desktop |
 | Claude Code | CLI |
 | CodeBuddy | CLI + Desktop |
-| WorkBuddy | CLI + Desktop |
 | Qoder | CLI + Desktop |
-| Cursor | Desktop |
-| TRAE | Desktop |
+| OpenCode | CLI |
+| Continue | CLI |
+| Gemini | CLI + Desktop |
+| Aider | CLI |
+| Copilot | CLI |
+| Codeium | CLI |
+| JetBrains | Desktop |
+| Augment | CLI |
+| Supermaven | CLI |
+| GitHub CLI | CLI |
 
-## 配置文件
+## Configuration
 
-配置存储在 `~/.config/mop/` 目录下：
+Config files are stored in `~/.config/mop/`:
 
-- `config.json` — 全局配置（删除模式等）
-- `whitelist.json` — 白名单路径
-- `enabled_scanners.json` — 启用的扫描器
+- `config.json` — Global config (delete mode, etc.)
+- `whitelist.json` — Whitelisted paths
+- `enabled_scanners.json` — Enabled scanners
 
-## 架构
+## Architecture
 
 ```
-main.go          # 入口，子命令分发
-scanner/         # 扫描器，每个工具一个文件
-cleaner/         # 清理器（文件删除 / 废纸篓）
-tui/             # TUI 界面
-config/          # 配置管理
-whitelist/       # 白名单管理
+main.go          # Entry point, subcommand dispatch
+scanner/         # Scanners, one file per tool
+cleaner/         # Cleaners (file deletion / Trash)
+tui/             # TUI interface
+config/          # Config management
+whitelist/       # Whitelist management
+update/          # Self-update logic
 ```
