@@ -124,16 +124,26 @@ func (m Model) Init() tea.Cmd {
 	return tea.WindowSize()
 }
 
+// minScanDisplay keeps the scanning screen visible for at least this long so a
+// fast scan (few paths) doesn't flash by and look like a freeze.
+const minScanDisplay = 600 * time.Millisecond
+
 func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
 	return tea.Batch(
 		tickCmd(),
 		func() tea.Msg {
+			start := time.Now()
 			scanner.IncrementScanCount()
 			groups := scanner.ScanFiltered(scanner.ScanOptions{
 				DeepMode:     deepMode,
 				TimeFilter:   timeFilter,
 				IncludeEmpty: true,
 			})
+			// Hold the scanning screen for at least minScanDisplay so a quick
+			// re-scan (few paths) shows a loading state instead of flickering.
+			if elapsed := time.Since(start); elapsed < minScanDisplay {
+				time.Sleep(minScanDisplay - elapsed)
+			}
 			return scanResultMsg{groups: groups}
 		},
 	)

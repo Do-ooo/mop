@@ -104,18 +104,29 @@ func IncrementScanCount() {
 	SaveEnabled(enabledScanners)
 }
 
+// AutoDetectNewTools reconciles the enabled set with what's actually installed:
+// it checks tools that are newly or re-available and unchecks tools that are no
+// longer installed, so dead entries don't linger and newly added tools show up.
 func AutoDetectNewTools() {
 	changed := false
 	for _, s := range Scanners {
-		current, exists := enabledScanners[s.Name()]
+		name := s.Name()
+		current, exists := enabledScanners[name]
 		available := s.Available()
-		if !exists {
-			enabledScanners[s.Name()] = available
+		switch {
+		case !exists:
+			// Scanner not seen before (e.g. added in an update): adopt its availability.
+			enabledScanners[name] = available
 			if available {
 				changed = true
 			}
-		} else if !current && available {
-			enabledScanners[s.Name()] = true
+		case current && !available:
+			// Was enabled but the tool is gone: uncheck it.
+			enabledScanners[name] = false
+			changed = true
+		case !current && available:
+			// Was unchecked but now installed (reinstalled or new): check it.
+			enabledScanners[name] = true
 			changed = true
 		}
 	}

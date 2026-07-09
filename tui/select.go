@@ -131,6 +131,7 @@ func updateMenu(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = screenScanning
 				return m, scanCmdWithFilter(m.timeFilter, m.deepMode)
 			case menuManageTools:
+				scanner.AutoDetectNewTools()
 				m.screen = screenManageTools
 				m.cursor = 0
 			case menuAbout:
@@ -301,38 +302,16 @@ func updateSelect(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) cursorLine() int {
-	if len(m.entries) == 0 || m.cursor >= len(m.entries) {
-		return 0
-	}
-	// m.entries is built in group order (header then its items), so the entry
-	// index advances by one per rendered row; no inner search is needed.
-	line := 0
-	entryIdx := 0
-	for gi, g := range m.groups {
-		if gi > 0 {
-			line++
-		}
-		if m.cursor == entryIdx {
-			return line
-		}
-		entryIdx++
-		line++
-		for range g.Items {
-			if m.cursor == entryIdx {
-				return line
-			}
-			entryIdx++
-			line++
-		}
-	}
-	return line
-}
-
 func (m *Model) updateScrollOffset() {
-	contentLines := buildContentLines(*m)
+	contentLines, entryLines := buildContentLines(*m)
 	totalContent := len(contentLines)
-	cursorLine := m.cursorLine()
+
+	// Look up the cursor's rendered line from the single source of truth built
+	// by buildContentLines, so scrolling can never drift from what is drawn.
+	cursorLine := 0
+	if m.cursor >= 0 && m.cursor < len(entryLines) {
+		cursorLine = entryLines[m.cursor]
+	}
 
 	visibleHeight := calcVisibleHeight(*m)
 
@@ -361,12 +340,18 @@ func (m *Model) updateScrollOffset() {
 	}
 }
 
-func buildContentLines(m Model) []string {
+// buildContentLines renders the select screen into display lines and, as a
+// single source of truth, also returns entryLines: entryLines[i] is the index
+// into the returned lines slice where entry i (as built by buildEntries) is
+// rendered. cursorLine/scroll logic must use this mapping rather than
+// re-deriving line numbers, so rendering and scrolling can never desync.
+func buildContentLines(m Model) ([]string, []int) {
 	var lines []string
+	entryLines := make([]int, len(m.entries))
 
 	if len(m.groups) == 0 {
 		lines = append(lines, "No AI tool caches found.")
-		return lines
+		return lines, entryLines
 	}
 
 	descColWidth := 40
@@ -377,6 +362,9 @@ func buildContentLines(m Model) []string {
 	entryIdx := 0
 	for gi, g := range m.groups {
 		headerIdx := entryIdx
+		if headerIdx < len(entryLines) {
+			entryLines[headerIdx] = len(lines)
+		}
 		entryIdx++
 
 		isCursorOnHeader := m.cursor == headerIdx
@@ -426,6 +414,9 @@ func buildContentLines(m Model) []string {
 		} else {
 			for ii, item := range g.Items {
 				thisEntryIdx := entryIdx
+				if thisEntryIdx < len(entryLines) {
+					entryLines[thisEntryIdx] = len(lines)
+				}
 				entryIdx++
 
 				isWL := whitelist.IsWhitelisted(m.whitelist, item.Path)
@@ -486,7 +477,7 @@ func buildContentLines(m Model) []string {
 		lines = append(lines, "")
 	}
 
-	return lines
+	return lines, entryLines
 }
 
 func calcVisibleHeight(m Model) int {
@@ -509,7 +500,7 @@ func viewSelect(m Model) string {
 	b.WriteString(dimStyle.Render("Filter: " + filterLabel + " [t]"))
 	b.WriteString("\n\n")
 
-	contentLines := buildContentLines(m)
+	contentLines, _ := buildContentLines(m)
 	totalContent := len(contentLines)
 
 	visibleHeight := calcVisibleHeight(m)
