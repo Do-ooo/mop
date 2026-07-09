@@ -51,6 +51,7 @@ func (s *ClaudeCodeScanner) Scan() ([]CacheItem, error) {
 		{"sessions", "Sessions", RiskDeep},
 		{"shell-snapshots", "Shell snapshots", RiskRegular},
 		{"backups", "Backups", RiskDeep},
+		{"projects", "Project conversations & index", RiskDeep},
 	}
 	for _, it := range cliItems {
 		fullPath := filepath.Join(base, it.name)
