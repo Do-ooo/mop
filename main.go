@@ -13,8 +13,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	_ "mop/scanner"
 )
 
 func main() {

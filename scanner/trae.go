@@ -43,6 +43,40 @@ func (s *TraeScanner) Scan() ([]CacheItem, error) {
 		return nil, err
 	}
 	var items []CacheItem
+
+	cliPath := filepath.Join(home, ".trae")
+	if _, err := os.Stat(cliPath); err == nil {
+		cliItems := []struct {
+			name string
+			desc string
+			risk RiskLevel
+		}{
+			{"logs", "Logs", RiskRegular},
+			{"cache", "Cache", RiskRegular},
+			{"tmp", "Temp", RiskRegular},
+			{"shell-snapshots", "Shell snapshots", RiskRegular},
+			{"sessions", "Sessions", RiskDeep},
+		}
+		for _, it := range cliItems {
+			fullPath := filepath.Join(cliPath, it.name)
+			info, err := os.Stat(fullPath)
+			if err != nil || !info.IsDir() {
+				continue
+			}
+			size, _ := dirSize(fullPath)
+			if size == 0 {
+				continue
+			}
+			items = append(items, CacheItem{
+				Path:        fullPath,
+				Size:        size,
+				Description: it.desc,
+				ModTime:     info.ModTime(),
+				Risk:        it.risk,
+			})
+		}
+	}
+
 	desktopNames := []string{"TRAE SOLO CN", "Trae"}
 	for _, name := range desktopNames {
 		if _, err := os.Stat(filepath.Join(home, "Library", "Application Support", name)); err == nil {

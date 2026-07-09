@@ -801,5 +801,3 @@ func updateManageTools(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	return m, nil
 }
-
-

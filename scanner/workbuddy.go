@@ -44,33 +44,33 @@ func (s *WorkBuddyScanner) Scan() ([]CacheItem, error) {
 	cliPath := filepath.Join(home, ".workbuddy")
 	if _, err := os.Stat(cliPath); err == nil {
 		cliItems := []struct {
-		name string
-		desc string
-		risk RiskLevel
-	}{
-		{"logs", "Logs", RiskRegular},
-		{"sessions", "Sessions", RiskDeep},
-		{"shell-snapshots", "Shell snapshots", RiskRegular},
-		{"traces", "Traces", RiskRegular},
-	}
-	for _, it := range cliItems {
-		fullPath := filepath.Join(cliPath, it.name)
-		info, err := os.Stat(fullPath)
-		if err != nil || !info.IsDir() {
-			continue
+			name string
+			desc string
+			risk RiskLevel
+		}{
+			{"logs", "Logs", RiskRegular},
+			{"sessions", "Sessions", RiskDeep},
+			{"shell-snapshots", "Shell snapshots", RiskRegular},
+			{"traces", "Traces", RiskRegular},
 		}
-		size, _ := dirSize(fullPath)
-		if size == 0 {
-			continue
+		for _, it := range cliItems {
+			fullPath := filepath.Join(cliPath, it.name)
+			info, err := os.Stat(fullPath)
+			if err != nil || !info.IsDir() {
+				continue
+			}
+			size, _ := dirSize(fullPath)
+			if size == 0 {
+				continue
+			}
+			items = append(items, CacheItem{
+				Path:        fullPath,
+				Size:        size,
+				Description: it.desc,
+				ModTime:     info.ModTime(),
+				Risk:        it.risk,
+			})
 		}
-		items = append(items, CacheItem{
-			Path:        fullPath,
-			Size:        size,
-			Description: it.desc,
-			ModTime:     info.ModTime(),
-			Risk:        it.risk,
-		})
-	}
 	}
 	items = append(items, scanElectronDesktop("WorkBuddy")...)
 	return items, nil

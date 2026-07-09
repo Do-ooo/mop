@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -23,9 +24,9 @@ type CacheItem struct {
 }
 
 type ToolGroup struct {
-	Name     string
-	Type     string
-	Items    []CacheItem
+	Name      string
+	Type      string
+	Items     []CacheItem
 	TotalSize int64
 }
 
@@ -125,7 +126,7 @@ func ScanAll() ([]ToolGroup, error) {
 func FormatSize(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
-		return formatInt(bytes) + " B"
+		return strconv.FormatInt(bytes, 10) + " B"
 	}
 	div, exp := int64(unit), 0
 	for n := bytes / unit; n >= unit; n /= unit {
@@ -133,41 +134,7 @@ func FormatSize(bytes int64) string {
 		exp++
 	}
 	sizes := []string{"KB", "MB", "GB", "TB"}
-	return formatFloat(float64(bytes)/float64(div)) + " " + sizes[exp]
-}
-
-func formatFloat(f float64) string {
-	if f >= 100 {
-		return formatInt(int64(f))
-	}
-	if f >= 10 {
-		s := formatInt(int64(f * 10))
-		return s[:len(s)-1] + "." + s[len(s)-1:]
-	}
-	s := formatInt(int64(f * 100))
-	return s[:len(s)-2] + "." + s[len(s)-2:]
-}
-
-func formatInt(n int64) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [20]byte
-	i := len(buf)
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
+	return strconv.FormatFloat(float64(bytes)/float64(div), 'f', 1, 64) + " " + sizes[exp]
 }
 
 func dirSize(path string) (int64, error) {

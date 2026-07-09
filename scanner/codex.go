@@ -46,35 +46,38 @@ func (s *CodexScanner) Scan() ([]CacheItem, error) {
 	cliPath := filepath.Join(home, ".codex")
 	if _, err := os.Stat(cliPath); err == nil {
 		cliItems := []struct {
-		name string
-		desc string
-		risk RiskLevel
-	}{
-		{".tmp", "Temp files", RiskRegular},
-		{"cache", "Cache", RiskRegular},
-		{"tmp", "Temp", RiskRegular},
-		{"sessions", "Sessions", RiskDeep},
-		{"archived_sessions", "Archived sessions", RiskDeep},
-		{"shell_snapshots", "Shell snapshots", RiskRegular},
-		{"log", "Logs", RiskRegular},
-	}
-	for _, it := range cliItems {
-		fullPath := filepath.Join(cliPath, it.name)
-		info, err := os.Stat(fullPath)
-		if err != nil {
-			continue
+			name string
+			desc string
+			risk RiskLevel
+		}{
+			{".tmp", "Temp files", RiskRegular},
+			{"cache", "Cache", RiskRegular},
+			{"tmp", "Temp", RiskRegular},
+			{"sessions", "Sessions", RiskDeep},
+			{"archived_sessions", "Archived sessions", RiskDeep},
+			{"shell_snapshots", "Shell snapshots", RiskRegular},
+			{"log", "Logs", RiskRegular},
 		}
-		size, err := dirSize(fullPath)
-		if err != nil {
-			continue
-		}
-		items = append(items, CacheItem{
-			Path:        fullPath,
-			Size:        size,
-			Description: it.desc,
-			ModTime:     info.ModTime(),
-			Risk:        it.risk,
-		})
+		for _, it := range cliItems {
+			fullPath := filepath.Join(cliPath, it.name)
+			info, err := os.Stat(fullPath)
+			if err != nil {
+				continue
+			}
+			size, err := dirSize(fullPath)
+			if err != nil {
+				continue
+			}
+			if size == 0 {
+				continue
+			}
+			items = append(items, CacheItem{
+				Path:        fullPath,
+				Size:        size,
+				Description: it.desc,
+				ModTime:     info.ModTime(),
+				Risk:        it.risk,
+			})
 		}
 	}
 
@@ -96,6 +99,9 @@ func (s *CodexScanner) Scan() ([]CacheItem, error) {
 			}
 			size, err := dirSize(fullPath)
 			if err != nil {
+				continue
+			}
+			if size == 0 {
 				continue
 			}
 			items = append(items, CacheItem{

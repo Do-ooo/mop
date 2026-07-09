@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	GitHubRepo  = "Do-ooo/mop"
+	GitHubRepo    = "Do-ooo/mop"
 	CheckInterval = 15 * 24 * time.Hour
 )
 
 var Version = "dev"
 
 type Release struct {
-	TagName string `json:"tag_name"`
-	Name    string `json:"name"`
+	TagName string  `json:"tag_name"`
+	Name    string  `json:"name"`
 	Assets  []Asset `json:"assets"`
 }
 
@@ -33,9 +33,9 @@ type Asset struct {
 }
 
 type UpdateInfo struct {
-	Available   bool
-	LatestVersion string
-	DownloadURL string
+	Available      bool
+	LatestVersion  string
+	DownloadURL    string
 	CurrentVersion string
 }
 
@@ -69,7 +69,7 @@ func CheckForUpdate() (*UpdateInfo, error) {
 	currentVersion := Version
 
 	info := &UpdateInfo{
-		LatestVersion: latestVersion,
+		LatestVersion:  latestVersion,
 		CurrentVersion: currentVersion,
 		Available:      latestVersion != currentVersion,
 	}

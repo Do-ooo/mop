@@ -38,31 +38,31 @@ type listEntry struct {
 }
 
 type Model struct {
-	screen           screen
-	menuCursor       int
-	groups           []scanner.ToolGroup
-	entries          []listEntry
-	selected         map[[2]int]bool
-	whitelist        map[string]bool
-	enabledScanners  map[string]bool
-	toolList         []scanner.ToolScanner
-	cursor           int
-	totalSize        int64
-	cleanedSize      int64
-	currentIdx       int
-	err              error
-	spinnerIdx       int
-	cleanItems       []scanner.CacheItem
-	cleanResults     []cleaner.CleanResult
-	cleanStartTime   time.Time
-	cleanElapsed     time.Duration
-	trashMode        bool
-	timeFilter       int
-	deepMode         bool
-	confirmClean     bool
-	width            int
-	height           int
-	scrollOffset     int
+	screen          screen
+	menuCursor      int
+	groups          []scanner.ToolGroup
+	entries         []listEntry
+	selected        map[[2]int]bool
+	whitelist       map[string]bool
+	enabledScanners map[string]bool
+	toolList        []scanner.ToolScanner
+	cursor          int
+	totalSize       int64
+	cleanedSize     int64
+	currentIdx      int
+	err             error
+	spinnerIdx      int
+	cleanItems      []scanner.CacheItem
+	cleanResults    []cleaner.CleanResult
+	cleanStartTime  time.Time
+	cleanElapsed    time.Duration
+	trashMode       bool
+	timeFilter      int
+	deepMode        bool
+	confirmClean    bool
+	width           int
+	height          int
+	scrollOffset    int
 }
 
 type scanResultMsg struct {
