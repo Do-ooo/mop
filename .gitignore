@@ -1,0 +1,9 @@
+# Compiled binary
+/mop
+
+# Local project data / memory
+.workbuddy/
+
+# OS / editor
+.DS_Store
+*.swp
