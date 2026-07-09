@@ -1,5 +1,9 @@
 # mop
 
+<p align="center">
+  <img src="assets/Headpic.png" alt="mop" width="600">
+</p>
+
 [English](README.md) | 中文文档
 
 AI Tool Cache Cleaner — 快速清理 AI 编程工具的缓存和会话数据。

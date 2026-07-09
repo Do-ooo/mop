@@ -1,5 +1,9 @@
 # mop
 
+<p align="center">
+  <img src="assets/Headpic.png" alt="mop" width="600">
+</p>
+
 [中文文档](README_ZH.md) | English
 
 AI Tool Cache Cleaner — Fast cleanup of cache and session data from AI coding tools.
