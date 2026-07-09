@@ -305,33 +305,24 @@ func (m Model) cursorLine() int {
 	if len(m.entries) == 0 || m.cursor >= len(m.entries) {
 		return 0
 	}
+	// m.entries is built in group order (header then its items), so the entry
+	// index advances by one per rendered row; no inner search is needed.
 	line := 0
+	entryIdx := 0
 	for gi, g := range m.groups {
 		if gi > 0 {
 			line++
 		}
-		headerEntryIdx := -1
-		for ei, e := range m.entries {
-			if e.isHeader && e.groupIdx == gi {
-				headerEntryIdx = ei
-				break
-			}
-		}
-		if m.cursor == headerEntryIdx {
+		if m.cursor == entryIdx {
 			return line
 		}
+		entryIdx++
 		line++
-		for ii := range g.Items {
-			itemEntryIdx := -1
-			for ei, e := range m.entries {
-				if !e.isHeader && e.groupIdx == gi && e.itemIdx == ii {
-					itemEntryIdx = ei
-					break
-				}
-			}
-			if m.cursor == itemEntryIdx {
+		for range g.Items {
+			if m.cursor == entryIdx {
 				return line
 			}
+			entryIdx++
 			line++
 		}
 	}
@@ -381,14 +372,12 @@ func buildContentLines(m Model) []string {
 	descColWidth := 40
 	sizeColWidth := 12
 
+	// m.entries is ordered as [header, items...] per group, so we can track the
+	// current entry index with a running counter instead of searching.
+	entryIdx := 0
 	for gi, g := range m.groups {
-		headerIdx := -1
-		for ei, e := range m.entries {
-			if e.isHeader && e.groupIdx == gi {
-				headerIdx = ei
-				break
-			}
-		}
+		headerIdx := entryIdx
+		entryIdx++
 
 		isCursorOnHeader := m.cursor == headerIdx
 		allSelected := true
@@ -436,17 +425,12 @@ func buildContentLines(m Model) []string {
 			lines = append(lines, dimStyle.Render("    (No caches found)"))
 		} else {
 			for ii, item := range g.Items {
-				entryIdx := -1
-				for ei, e := range m.entries {
-					if !e.isHeader && e.groupIdx == gi && e.itemIdx == ii {
-						entryIdx = ei
-						break
-					}
-				}
+				thisEntryIdx := entryIdx
+				entryIdx++
 
 				isWL := whitelist.IsWhitelisted(m.whitelist, item.Path)
 				cursor := "  "
-				if entryIdx == m.cursor {
+				if thisEntryIdx == m.cursor {
 					cursor = cursorStyle.Render("> ")
 				}
 
@@ -491,7 +475,7 @@ func buildContentLines(m Model) []string {
 					sizeColored,
 				)
 
-				if entryIdx == m.cursor && !isWL {
+				if thisEntryIdx == m.cursor && !isWL {
 					line = cursorStyle.Render(line)
 				}
 

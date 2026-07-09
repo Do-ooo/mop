@@ -5,7 +5,6 @@ import (
 	"mop/config"
 	"mop/scanner"
 	"mop/whitelist"
-	"sort"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -130,59 +129,11 @@ func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
 		tickCmd(),
 		func() tea.Msg {
 			scanner.IncrementScanCount()
-			var groups []scanner.ToolGroup
-			now := time.Now()
-			for _, s := range scanner.Scanners {
-				if !s.Enabled() {
-					continue
-				}
-				if !s.Available() {
-					continue
-				}
-				items, err := s.Scan()
-				if err != nil {
-					continue
-				}
-
-				var filtered []scanner.CacheItem
-				for _, item := range items {
-					if !deepMode && item.Risk == scanner.RiskDeep {
-						continue
-					}
-					age := now.Sub(item.ModTime)
-					days := int(age.Hours() / 24)
-					switch timeFilter {
-					case 0:
-						if days <= 3 {
-							filtered = append(filtered, item)
-						}
-					case 1:
-						if days <= 7 {
-							filtered = append(filtered, item)
-						}
-					case 2:
-						if days <= 30 {
-							filtered = append(filtered, item)
-						}
-					case 3:
-						filtered = append(filtered, item)
-					}
-				}
-
-				sort.Slice(filtered, func(i, j int) bool {
-					return filtered[i].Size > filtered[j].Size
-				})
-				var total int64
-				for _, item := range filtered {
-					total += item.Size
-				}
-				groups = append(groups, scanner.ToolGroup{
-					Name:      s.Name(),
-					Type:      s.Type(),
-					Items:     filtered,
-					TotalSize: total,
-				})
-			}
+			groups := scanner.ScanFiltered(scanner.ScanOptions{
+				DeepMode:     deepMode,
+				TimeFilter:   timeFilter,
+				IncludeEmpty: true,
+			})
 			return scanResultMsg{groups: groups}
 		},
 	)

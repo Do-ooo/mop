@@ -43,8 +43,21 @@ func Register(s ToolScanner) {
 	Scanners = append(Scanners, s)
 }
 
-func ScanAll() ([]ToolGroup, error) {
+// ScanOptions controls how enabled scanners are scanned and filtered.
+type ScanOptions struct {
+	// DeepMode includes RiskDeep items when true.
+	DeepMode bool
+	// TimeFilter selects the recency window: 0=3d, 1=7d, 2=30d, 3(or other)=all.
+	TimeFilter int
+	// IncludeEmpty keeps a tool's group even when it has no matching items.
+	IncludeEmpty bool
+}
+
+// ScanFiltered runs every enabled & available scanner and applies risk/time
+// filtering. It is the single scan core shared by the CLI (ScanAll) and the TUI.
+func ScanFiltered(opts ScanOptions) []ToolGroup {
 	var groups []ToolGroup
+	now := time.Now()
 	for _, s := range Scanners {
 		if !s.Enabled() {
 			continue
@@ -56,24 +69,57 @@ func ScanAll() ([]ToolGroup, error) {
 		if err != nil {
 			continue
 		}
-		if len(items) == 0 {
+
+		var filtered []CacheItem
+		for _, item := range items {
+			if !opts.DeepMode && item.Risk == RiskDeep {
+				continue
+			}
+			if !withinTimeFilter(item.ModTime, opts.TimeFilter, now) {
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+
+		if len(filtered) == 0 && !opts.IncludeEmpty {
 			continue
 		}
-		sort.Slice(items, func(i, j int) bool {
-			return items[i].Size > items[j].Size
+
+		sort.Slice(filtered, func(i, j int) bool {
+			return filtered[i].Size > filtered[j].Size
 		})
 		var total int64
-		for _, item := range items {
+		for _, item := range filtered {
 			total += item.Size
 		}
 		groups = append(groups, ToolGroup{
 			Name:      s.Name(),
 			Type:      s.Type(),
-			Items:     items,
+			Items:     filtered,
 			TotalSize: total,
 		})
 	}
-	return groups, nil
+	return groups
+}
+
+func withinTimeFilter(mod time.Time, filter int, now time.Time) bool {
+	days := int(now.Sub(mod).Hours() / 24)
+	switch filter {
+	case 0:
+		return days <= 3
+	case 1:
+		return days <= 7
+	case 2:
+		return days <= 30
+	default:
+		return true
+	}
+}
+
+// ScanAll scans all enabled tools without any filtering (deep items included,
+// all time ranges, empty groups dropped). Used by the CLI commands.
+func ScanAll() ([]ToolGroup, error) {
+	return ScanFiltered(ScanOptions{DeepMode: true, TimeFilter: 3}), nil
 }
 
 func FormatSize(bytes int64) string {
