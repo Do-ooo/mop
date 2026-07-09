@@ -53,7 +53,7 @@ type Model struct {
 	currentIdx       int
 	err              error
 	spinnerIdx       int
-	scanIdx          int
+	cleanItems       []scanner.CacheItem
 	cleanResults     []cleaner.CleanResult
 	cleanStartTime   time.Time
 	cleanElapsed     time.Duration
@@ -71,16 +71,13 @@ type scanResultMsg struct {
 	err    error
 }
 
-type scanProgressMsg struct {
-	group scanner.ToolGroup
-}
-
 type cleanProgressMsg struct {
-	idx     int
-	size    int64
-	done    bool
-	err     error
-	results []cleaner.CleanResult
+	idx       int
+	size      int64
+	done      bool
+	hasResult bool
+	err       error
+	result    cleaner.CleanResult
 }
 
 type tickMsg struct{}
@@ -126,10 +123,6 @@ func InitialModel() Model {
 
 func (m Model) Init() tea.Cmd {
 	return tea.WindowSize()
-}
-
-func scanCmd() tea.Cmd {
-	return scanCmdWithFilter(0, false)
 }
 
 func scanCmdWithFilter(timeFilter int, deepMode bool) tea.Cmd {
@@ -241,15 +234,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 		}
-		if msg.done {
-			m.cleanResults = msg.results
+		if msg.hasResult {
+			m.cleanResults = append(m.cleanResults, msg.result)
+			m.currentIdx = msg.idx
+			m.cleanedSize += msg.size
+		}
+		if msg.done || m.currentIdx >= len(m.cleanItems) {
 			m.cleanElapsed = time.Since(m.cleanStartTime)
 			m.screen = screenDone
 			return m, nil
 		}
-		m.currentIdx = msg.idx
-		m.cleanedSize += msg.size
-		return m, nil
+		return m, cleanStepCmd(m)
 	}
 
 	switch m.screen {
@@ -298,6 +293,18 @@ func (m *Model) buildEntries() {
 			m.entries = append(m.entries, listEntry{groupIdx: gi, itemIdx: ii, isHeader: false})
 		}
 	}
+}
+
+func (m Model) collectSelectedItems() []scanner.CacheItem {
+	var items []scanner.CacheItem
+	for gi, g := range m.groups {
+		for ii := range g.Items {
+			if m.selected[[2]int{gi, ii}] {
+				items = append(items, g.Items[ii])
+			}
+		}
+	}
+	return items
 }
 
 func (m Model) calcTotal() int64 {

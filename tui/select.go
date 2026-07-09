@@ -197,8 +197,9 @@ func updateSelect(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cleanedSize = 0
 				m.spinnerIdx = 0
 				m.cleanResults = nil
+				m.cleanItems = m.collectSelectedItems()
 				m.cleanStartTime = time.Now()
-				return m, tea.Batch(cleanCmd(m), tickCmd())
+				return m, tea.Batch(cleanStepCmd(m), tickCmd())
 			case "n", "esc", "q":
 				m.confirmClean = false
 			}
@@ -228,12 +229,7 @@ func updateSelect(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else {
 				key := [2]int{entry.groupIdx, entry.itemIdx}
-				item := m.groups[entry.groupIdx].Items[entry.itemIdx]
-				if whitelist.IsWhitelisted(m.whitelist, item.Path) {
-					m.selected[key] = !m.selected[key]
-				} else {
-					m.selected[key] = !m.selected[key]
-				}
+				m.selected[key] = !m.selected[key]
 			}
 			m.totalSize = m.calcTotal()
 		case "w":
@@ -294,8 +290,9 @@ func updateSelect(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cleanedSize = 0
 			m.spinnerIdx = 0
 			m.cleanResults = nil
+			m.cleanItems = m.collectSelectedItems()
 			m.cleanStartTime = time.Now()
-			return m, tea.Batch(cleanCmd(m), tickCmd())
+			return m, tea.Batch(cleanStepCmd(m), tickCmd())
 		}
 	}
 
@@ -584,34 +581,33 @@ func viewSelect(m Model) string {
 	return b.String()
 }
 
-func rightAlign(s string, width int) string {
-	if len(s) >= width {
-		return s
+func cleanStepCmd(m Model) tea.Cmd {
+	idx := m.currentIdx
+	trashMode := m.trashMode
+	if idx >= len(m.cleanItems) {
+		return func() tea.Msg {
+			return cleanProgressMsg{done: true}
+		}
 	}
-	return strings.Repeat(" ", width-len(s)) + s
-}
-
-func cleanCmd(m Model) tea.Cmd {
+	item := m.cleanItems[idx]
 	return func() tea.Msg {
 		var fileCleaner cleaner.Cleaner
-		if m.trashMode {
+		if trashMode {
 			fileCleaner = cleaner.NewTrashCleaner()
 		} else {
 			fileCleaner = cleaner.NewFileCleaner()
 		}
-		var results []cleaner.CleanResult
-		var idx int
-		for gi, g := range m.groups {
-			for ii, item := range g.Items {
-				if !m.selected[[2]int{gi, ii}] {
-					continue
-				}
-				result, _ := fileCleaner.Clean(item)
-				results = append(results, result)
-				idx++
-			}
+		result, _ := fileCleaner.Clean(item)
+		var size int64
+		if result.Success {
+			size = result.Size
 		}
-		return cleanProgressMsg{done: true, results: results}
+		return cleanProgressMsg{
+			idx:       idx + 1,
+			size:      size,
+			result:    result,
+			hasResult: true,
+		}
 	}
 }
 

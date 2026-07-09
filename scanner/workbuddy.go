@@ -28,7 +28,7 @@ func (s *WorkBuddyScanner) Available() bool {
 	if err != nil {
 		return false
 	}
-	cliPath := filepath.Join(home, ".work buddy")
+	cliPath := filepath.Join(home, ".workbuddy")
 	desktopPath := filepath.Join(home, "Library", "Application Support", "WorkBuddy")
 	_, err1 := os.Stat(cliPath)
 	_, err2 := os.Stat(desktopPath)
@@ -41,7 +41,7 @@ func (s *WorkBuddyScanner) Scan() ([]CacheItem, error) {
 		return nil, err
 	}
 	var items []CacheItem
-	cliPath := filepath.Join(home, ".work buddy")
+	cliPath := filepath.Join(home, ".workbuddy")
 	if _, err := os.Stat(cliPath); err == nil {
 		cliItems := []struct {
 		name string

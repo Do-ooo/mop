@@ -158,6 +158,11 @@ func runScan() {
 		os.Exit(1)
 	}
 
+	wl, _ := whitelist.Load()
+	if wl == nil {
+		wl = make(map[string]bool)
+	}
+
 	var totalItems int
 	var totalSize int64
 
@@ -166,6 +171,9 @@ func runScan() {
 		fmt.Printf("  %-40s %10s\n", "Path", "Size")
 		fmt.Printf("  %s\n", "─")
 		for _, item := range g.Items {
+			if whitelist.IsWhitelisted(wl, item.Path) {
+				continue
+			}
 			fmt.Printf("  %-40s %10s\n", item.Description, scanner.FormatSize(item.Size))
 			totalItems++
 			totalSize += item.Size
