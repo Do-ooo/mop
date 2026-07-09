@@ -2,10 +2,12 @@ package update
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -66,7 +68,7 @@ func CheckForUpdate() (*UpdateInfo, error) {
 	}
 
 	latestVersion := strings.TrimPrefix(release.TagName, "v")
-	currentVersion := Version
+	currentVersion := strings.TrimPrefix(Version, "v")
 
 	info := &UpdateInfo{
 		LatestVersion:  latestVersion,
@@ -131,6 +133,18 @@ func updateCheckFile() (string, error) {
 }
 
 func DoUpdate() error {
+	// mop self-update is macOS-only: releases only ship darwin binaries.
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("self-update is only supported on macOS")
+	}
+
+	elevated := false
+	for _, a := range os.Args {
+		if a == "--elevated" {
+			elevated = true
+		}
+	}
+
 	info, err := CheckForUpdate()
 	if err != nil {
 		return fmt.Errorf("failed to check for updates: %w", err)
@@ -155,11 +169,32 @@ func DoUpdate() error {
 	}
 
 	if err := replaceBinary(currentExe, tmpPath); err != nil {
+		// If the binary lives in a system directory we can't write to, re-exec
+		// under sudo so the user gets a password prompt instead of a bare error.
+		if isPermissionError(err) && !elevated {
+			fmt.Println("Elevated permissions required to replace the binary. Re-running with sudo...")
+			if reexecErr := reexecSudo(currentExe); reexecErr != nil {
+				return fmt.Errorf("failed to replace binary: %w (try 'sudo mop update')", err)
+			}
+			return nil
+		}
 		return fmt.Errorf("failed to replace binary: %w", err)
 	}
 
 	fmt.Printf("Updated to v%s!\n", info.LatestVersion)
 	return nil
+}
+
+func isPermissionError(err error) bool {
+	return errors.Is(err, os.ErrPermission) || strings.Contains(err.Error(), "permission denied")
+}
+
+func reexecSudo(exePath string) error {
+	cmd := exec.Command("sudo", exePath, "update", "--elevated")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func downloadBinary(url string) (string, error) {
