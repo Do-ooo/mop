@@ -125,6 +125,7 @@ Checks for the latest release and updates the binary in place.
 | Augment | CLI |
 | Supermaven | CLI |
 | GitHub CLI | CLI |
+| MiMo Code | CLI |
 
 ## Configuration
 

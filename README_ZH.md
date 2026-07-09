@@ -125,6 +125,7 @@ mop update
 | Augment | CLI |
 | Supermaven | CLI |
 | GitHub CLI | CLI |
+| MiMo Code | CLI |
 
 ## 配置文件
 
