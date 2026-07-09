@@ -31,7 +31,7 @@ func main() {
 			}
 			return
 		case "version":
-			fmt.Printf("mop v%s\n", update.Version)
+			fmt.Printf("mop %s\n", update.Version)
 			return
 		case "--dry-run":
 			runDryRun()
