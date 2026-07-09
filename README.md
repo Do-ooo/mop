@@ -6,7 +6,7 @@
 
 [中文文档](README_ZH.md) | English
 
-AI Tool Cache Cleaner — Fast cleanup of cache and session data from AI coding tools.
+AI coding tools leave gigabytes of cache, sessions, and credentials scattered across your disk — and they don't clean up after you uninstall them. mop finds and safely clears all of it in one TUI.
 
 ## Features
 
