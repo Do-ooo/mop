@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -209,10 +210,15 @@ func replaceBinary(oldPath, newPath string) error {
 	return nil
 }
 
-var cachedUpdateInfo *UpdateInfo
-var updateChecked bool
+var (
+	updateMu         sync.RWMutex
+	cachedUpdateInfo *UpdateInfo
+	updateChecked    bool
+)
 
 func GetCachedUpdate() *UpdateInfo {
+	updateMu.RLock()
+	defer updateMu.RUnlock()
 	if !updateChecked {
 		return nil
 	}
@@ -221,16 +227,22 @@ func GetCachedUpdate() *UpdateInfo {
 
 func BackgroundCheck() {
 	if !ShouldCheck() {
+		updateMu.Lock()
 		updateChecked = true
+		updateMu.Unlock()
 		return
 	}
 
 	go func() {
 		info, err := CheckForUpdate()
+		updateMu.Lock()
 		if err == nil {
 			cachedUpdateInfo = info
-			RecordCheck()
 		}
 		updateChecked = true
+		updateMu.Unlock()
+		if err == nil {
+			RecordCheck()
+		}
 	}()
 }

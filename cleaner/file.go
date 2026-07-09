@@ -11,6 +11,12 @@ func (f *FileCleaner) Clean(item scanner.CacheItem) (CleanResult, error) {
 		Size: item.Size,
 	}
 
+	if err := validateCleanPath(item.Path); err != nil {
+		result.Success = false
+		result.Error = err.Error()
+		return result, err
+	}
+
 	info, err := os.Stat(item.Path)
 	if err != nil {
 		result.Success = false
