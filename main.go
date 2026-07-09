@@ -39,7 +39,11 @@ func main() {
 		}
 	}
 
-	update.BackgroundCheck()
+	// If a periodic check is due and the user accepts the update prompt, the
+	// update runs here in the bare terminal and we exit without entering the TUI.
+	if update.StartupCheck() {
+		return
+	}
 
 	p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

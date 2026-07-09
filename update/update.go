@@ -1,7 +1,7 @@
 package update
 
 import (
-	"encoding/json"
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -16,23 +16,15 @@ import (
 )
 
 const (
-	GitHubRepo    = "Do-ooo/mop"
+	GitHubRepo = "Do-ooo/mop"
+	// RawVersionURL points at the plain-text VERSION file on the main branch.
+	// It is served by GitHub's raw CDN, which is NOT rate-limited like the API,
+	// so update checks never hit the 60 req/hour/IP cap that caused 403s.
+	RawVersionURL = "https://raw.githubusercontent.com/Do-ooo/mop/main/VERSION"
 	CheckInterval = 15 * 24 * time.Hour
 )
 
 var Version = "dev"
-
-type Release struct {
-	TagName string  `json:"tag_name"`
-	Name    string  `json:"name"`
-	Assets  []Asset `json:"assets"`
-}
-
-type Asset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-	Size               int64  `json:"size"`
-}
 
 type UpdateInfo struct {
 	Available      bool
@@ -42,14 +34,12 @@ type UpdateInfo struct {
 }
 
 func CheckForUpdate() (*UpdateInfo, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", GitHubRepo)
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", RawVersionURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "mop-cli")
 
 	resp, err := client.Do(req)
@@ -59,15 +49,18 @@ func CheckForUpdate() (*UpdateInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("version check returned status %d", resp.StatusCode)
 	}
 
-	var release Release
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
 
-	latestVersion := strings.TrimPrefix(release.TagName, "v")
+	latestVersion := strings.TrimPrefix(strings.TrimSpace(string(body)), "v")
+	if latestVersion == "" {
+		return nil, fmt.Errorf("empty version file")
+	}
 	currentVersion := strings.TrimPrefix(Version, "v")
 
 	info := &UpdateInfo{
@@ -76,16 +69,13 @@ func CheckForUpdate() (*UpdateInfo, error) {
 		Available:      latestVersion != currentVersion,
 	}
 
+	// Release asset names follow a fixed scheme (mop-<os>-<arch>), so the
+	// download URL can be derived from the version alone — no API call needed.
 	if info.Available {
-		for _, asset := range release.Assets {
-			if strings.Contains(asset.Name, runtime.GOOS) && strings.Contains(asset.Name, runtime.GOARCH) {
-				info.DownloadURL = asset.BrowserDownloadURL
-				break
-			}
-		}
-		if info.DownloadURL == "" {
-			info.Available = false
-		}
+		info.DownloadURL = fmt.Sprintf(
+			"https://github.com/%s/releases/download/v%s/mop-%s-%s",
+			GitHubRepo, latestVersion, runtime.GOOS, runtime.GOARCH,
+		)
 	}
 
 	return info, nil
@@ -260,24 +250,48 @@ func GetCachedUpdate() *UpdateInfo {
 	return cachedUpdateInfo
 }
 
-func BackgroundCheck() {
+// StartupCheck runs before the TUI launches. When a periodic check is due it
+// queries the latest version synchronously — cheap now that it only fetches a
+// few-byte VERSION file from the raw CDN — and, if a newer version exists,
+// prompts the user in the bare terminal (oh-my-zsh style) before entering the
+// full-screen UI. Returns true if an update was performed, in which case the
+// caller should exit instead of launching the TUI.
+//
+// A failed check degrades silently: startup is never blocked by network issues.
+func StartupCheck() bool {
 	if !ShouldCheck() {
-		updateMu.Lock()
-		updateChecked = true
-		updateMu.Unlock()
-		return
+		return false
 	}
 
-	go func() {
-		info, err := CheckForUpdate()
-		updateMu.Lock()
-		if err == nil {
-			cachedUpdateInfo = info
-		}
-		updateChecked = true
-		updateMu.Unlock()
-		if err == nil {
-			RecordCheck()
-		}
-	}()
+	info, err := CheckForUpdate()
+	if err != nil {
+		return false
+	}
+	RecordCheck()
+
+	// Cache the result so the in-TUI banner can remind the user if they decline.
+	updateMu.Lock()
+	cachedUpdateInfo = info
+	updateChecked = true
+	updateMu.Unlock()
+
+	if !info.Available {
+		return false
+	}
+
+	fmt.Printf("New version available: v%s (current v%s)\n", info.LatestVersion, info.CurrentVersion)
+	fmt.Print("Update now? [Y/n] ")
+
+	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "n", "no":
+		return false
+	}
+
+	// Default (empty / y / yes) proceeds with the update.
+	if err := DoUpdate(); err != nil {
+		fmt.Printf("Update failed: %v\n", err)
+		return false
+	}
+	return true
 }
