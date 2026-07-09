@@ -27,7 +27,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             BINARY="${BINARY}.exe"
           fi
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${GITHUB_REF_NAME}"
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags "-X mop/update.Version=$VERSION" -o "$BINARY" .
       - name: Upload artifact
         uses: actions/upload-artifact@v4
